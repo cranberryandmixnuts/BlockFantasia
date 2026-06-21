@@ -1,17 +1,34 @@
 using DG.Tweening;
+using Sirenix.OdinInspector;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+[ExecuteAlways]
+[DisallowMultipleComponent]
+[RequireComponent(typeof(Button))]
 public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
 {
-    public GameObject targetLeftChevron;
-    public GameObject targetRightChevron;
-    public GameObject targetLight;
-
+    [TitleGroup("References")]
+    [SerializeField] private GameObject targetLeftChevron;
+    [SerializeField] private GameObject targetRightChevron;
+    [SerializeField] private GameObject targetLight;
     [SerializeField] private Button button;
+    [SerializeField] private TMP_Text targetText;
+
+    [TitleGroup("Auto Resize")]
+    [SerializeField] private bool autoResizeWidthByText = true;
+    [SerializeField, ShowIf(nameof(autoResizeWidthByText))] private float widthPerTextCharacter = 24f;
+
+    [TitleGroup("Chevron")]
+    [SerializeField] private float chevronDistance = -30f;
+
+    [TitleGroup("Interaction")]
     [SerializeField] private float clickCooldownTime = 0.1f;
+
+    [TitleGroup("Animation")]
     [SerializeField] private float animationDuration = 0.1f;
 
     private readonly Vector3 defaultScale = new(0.03f, 0.03f, 1f);
@@ -20,20 +37,37 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private readonly Vector3 lightStartScale = new(0.05f, 0.01f, 1f);
     private readonly Vector3 lightVerticalScale = new(0.05f, 1f, 1f);
 
+    private RectTransform rootRectTransform;
+    private RectTransform leftChevronRectTransform;
+    private RectTransform rightChevronRectTransform;
+    private RectTransform lightRectTransform;
     private Graphic[] leftChevronGraphics;
     private Graphic[] rightChevronGraphics;
     private Graphic[] lightGraphics;
     private Sequence clickEffectSequence;
     private float lastClickTime = -Mathf.Infinity;
     private bool isInitialized;
+    private bool isRefreshingLayout;
 
     private void Awake()
     {
+        CacheReferences();
+        RefreshAdaptiveLayout();
+
+        if (!Application.IsPlaying(gameObject))
+            return;
+
         InitializeEffects();
     }
 
     private void OnEnable()
     {
+        CacheReferences();
+        RefreshAdaptiveLayout();
+
+        if (!Application.IsPlaying(gameObject))
+            return;
+
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
 
         if (isInitialized)
@@ -42,15 +76,38 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void Start()
     {
+        if (!Application.IsPlaying(gameObject))
+            return;
+
+        if (!isInitialized)
+            InitializeEffects();
+
+        button.onClick.RemoveListener(OnClickButton);
         button.onClick.AddListener(OnClickButton);
     }
 
     private void Update()
     {
+        RefreshAdaptiveLayout();
+
+        if (!Application.IsPlaying(gameObject))
+            return;
+
         bool isCooldownOver = lastClickTime + clickCooldownTime <= Time.time;
 
         if (isCooldownOver != button.interactable)
             button.interactable = isCooldownOver;
+    }
+
+    private void OnValidate()
+    {
+        CacheReferences();
+        RefreshAdaptiveLayout();
+    }
+
+    private void OnRectTransformDimensionsChange()
+    {
+        RefreshAdaptiveLayout();
     }
 
     public void OnPointerEnter(PointerEventData eventData) => OnMouseEnter();
@@ -97,6 +154,58 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
         CancelAllEffects(true);
     }
 
+    private void CacheReferences()
+    {
+        rootRectTransform = transform as RectTransform;
+        leftChevronRectTransform = targetLeftChevron.transform as RectTransform;
+        rightChevronRectTransform = targetRightChevron.transform as RectTransform;
+        lightRectTransform = targetLight.transform as RectTransform;
+    }
+
+    private void RefreshAdaptiveLayout()
+    {
+        if (isRefreshingLayout)
+            return;
+
+        isRefreshingLayout = true;
+
+        if (autoResizeWidthByText)
+            ResizeRootWidthByText();
+
+        SyncLightRectTransform();
+        SyncChevronPosition(leftChevronRectTransform, -1f);
+        SyncChevronPosition(rightChevronRectTransform, 1f);
+
+        isRefreshingLayout = false;
+    }
+
+    private void ResizeRootWidthByText()
+    {
+        int characterCount = GetTextCharacterCount();
+        float width = Mathf.Max(0f, characterCount * widthPerTextCharacter);
+        rootRectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+    }
+
+    private int GetTextCharacterCount()
+    {
+        targetText.ForceMeshUpdate(true, true);
+        return targetText.textInfo.characterCount;
+    }
+
+    private void SyncLightRectTransform()
+    {
+        Vector2 rootSize = rootRectTransform.rect.size;
+        lightRectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rootSize.x);
+        lightRectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rootSize.y);
+    }
+
+    private void SyncChevronPosition(RectTransform chevronRectTransform, float direction)
+    {
+        Vector2 position = chevronRectTransform.anchoredPosition;
+        position.x = direction * (rootRectTransform.rect.width * 0.5f + chevronDistance);
+        chevronRectTransform.anchoredPosition = position;
+    }
+
     private void InitializeEffects()
     {
         InitializeChevron(targetLeftChevron, out leftChevronGraphics);
@@ -138,9 +247,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
     {
         CancelClickEffect(true);
 
-        if (targetLight == null)
-            return;
-
+        SyncLightRectTransform();
         targetLight.transform.localScale = lightStartScale;
         SetAlpha(lightGraphics, 1f);
 
@@ -220,9 +327,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void ResetLight()
     {
-        if (targetLight == null)
-            return;
-
+        SyncLightRectTransform();
         targetLight.transform.localScale = defaultScale;
         SetAlpha(lightGraphics, 0f);
     }
@@ -243,9 +348,6 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
     {
         for (int i = 0; i < graphics.Length; i++)
         {
-            if (graphics[i] == null)
-                continue;
-
             graphics[i]
                 .DOFade(alpha, duration)
                 .SetLink(graphics[i].gameObject, LinkBehaviour.KillOnDestroy);
@@ -258,10 +360,9 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
         for (int i = 0; i < graphics.Length; i++)
         {
-            if (graphics[i] == null)
-                continue;
-
-            Tween fadeTween = graphics[i].DOFade(alpha, duration);
+            Tween fadeTween = graphics[i]
+                .DOFade(alpha, duration)
+                .SetLink(graphics[i].gameObject, LinkBehaviour.KillOnDestroy);
 
             if (isFirstTween)
             {
@@ -276,28 +377,16 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void KillGraphics(Graphic[] graphics)
     {
-        if (graphics == null)
-            return;
-
         for (int i = 0; i < graphics.Length; i++)
         {
-            if (graphics[i] == null)
-                continue;
-
             graphics[i].DOKill(false);
         }
     }
 
     private void SetAlpha(Graphic[] graphics, float alpha)
     {
-        if (graphics == null)
-            return;
-
         for (int i = 0; i < graphics.Length; i++)
         {
-            if (graphics[i] == null)
-                continue;
-
             Color color = graphics[i].color;
             color.a = alpha;
             graphics[i].color = color;
@@ -317,6 +406,9 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void OnDisable()
     {
+        if (!Application.IsPlaying(gameObject))
+            return;
+
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
 
         if (isInitialized)
@@ -325,6 +417,9 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void OnDestroy()
     {
+        if (!Application.IsPlaying(gameObject))
+            return;
+
         if (button != null)
             button.onClick.RemoveListener(OnClickButton);
 
