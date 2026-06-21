@@ -130,7 +130,6 @@ GameObject:
   - component: {fileID: 20267614}
   - component: {fileID: 20267616}
   - component: {fileID: 20267615}
-  - component: {fileID: 20267617}
   m_Layer: 5
   m_Name: RightChevron
   m_TagString: Untagged
@@ -195,18 +194,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 20267613}
   m_CullTransparentMesh: 1
---- !u!225 &20267617
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 20267613}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &294876954
 GameObject:
   m_ObjectHideFlags: 0
@@ -293,7 +280,6 @@ GameObject:
   - component: {fileID: 422554639}
   - component: {fileID: 422554641}
   - component: {fileID: 422554640}
-  - component: {fileID: 422554642}
   m_Layer: 5
   m_Name: Light
   m_TagString: Untagged
@@ -358,18 +344,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 422554638}
   m_CullTransparentMesh: 1
---- !u!225 &422554642
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 422554638}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -747,9 +721,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23bdf1fdd151cce4582629709a503060, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ButtonController
-  targetChevrons:
-  - {fileID: 20267613}
-  - {fileID: 1706911238}
+  targetLeftChevron: {fileID: 1706911238}
+  targetRightChevron: {fileID: 20267613}
   targetLight: {fileID: 422554638}
   button: {fileID: 798159784}
   clickCooldownTime: 0.1
@@ -1052,8 +1025,8 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 422554639}
-  - {fileID: 20267614}
   - {fileID: 1706911239}
+  - {fileID: 20267614}
   m_Father: {fileID: 798159783}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -1610,7 +1583,6 @@ GameObject:
   - component: {fileID: 1706911239}
   - component: {fileID: 1706911241}
   - component: {fileID: 1706911240}
-  - component: {fileID: 1706911242}
   m_Layer: 5
   m_Name: LeftChevron
   m_TagString: Untagged
@@ -1675,18 +1647,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1706911238}
   m_CullTransparentMesh: 1
---- !u!225 &1706911242
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1706911238}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &1782262830
 GameObject:
   m_ObjectHideFlags: 0
