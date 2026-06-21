@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using Sirenix.OdinInspector;
 using TMPro;
@@ -5,6 +6,10 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [ExecuteAlways]
 [DisallowMultipleComponent]
@@ -23,13 +28,15 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
     [SerializeField, ShowIf(nameof(autoResizeWidthByText))] private float widthPerTextCharacter = 24f;
 
     [TitleGroup("Chevron")]
-    [SerializeField] private float chevronDistance = -30f;
+    [SerializeField] private float chevronDistance = -40f;
 
     [TitleGroup("Interaction")]
     [SerializeField] private float clickCooldownTime = 0.1f;
 
     [TitleGroup("Animation")]
     [SerializeField] private float animationDuration = 0.1f;
+
+    private static readonly string[] ManualLineSeparators = { "\r\n", "\n", "\r" };
 
     private readonly Vector3 defaultScale = new(0.03f, 0.03f, 1f);
     private readonly Vector3 hoverScale = new(0.3f, 0.3f, 1f);
@@ -47,12 +54,21 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private Sequence clickEffectSequence;
     private float lastClickTime = -Mathf.Infinity;
     private bool isInitialized;
-    private bool isRefreshingLayout;
+    private bool isApplyingLayout;
+    private bool layoutRefreshRequested;
+    private string observedText;
+    private bool observedAutoResizeWidthByText;
+    private float observedWidthPerTextCharacter;
+    private float observedChevronDistance;
+
+#if UNITY_EDITOR
+    private bool isEditorLayoutRefreshScheduled;
+#endif
 
     private void Awake()
     {
         CacheReferences();
-        RefreshAdaptiveLayout();
+        RequestAdaptiveLayoutRefresh();
 
         if (!Application.IsPlaying(gameObject))
             return;
@@ -63,7 +79,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private void OnEnable()
     {
         CacheReferences();
-        RefreshAdaptiveLayout();
+        RequestAdaptiveLayoutRefresh();
 
         if (!Application.IsPlaying(gameObject))
             return;
@@ -76,6 +92,8 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void Start()
     {
+        ApplyAdaptiveLayoutIfRequested();
+
         if (!Application.IsPlaying(gameObject))
             return;
 
@@ -88,7 +106,8 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void Update()
     {
-        RefreshAdaptiveLayout();
+        RequestAdaptiveLayoutRefreshIfObservedValuesChanged();
+        ApplyAdaptiveLayoutIfRequested();
 
         if (!Application.IsPlaying(gameObject))
             return;
@@ -102,12 +121,15 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private void OnValidate()
     {
         CacheReferences();
-        RefreshAdaptiveLayout();
+        RequestAdaptiveLayoutRefresh();
     }
 
     private void OnRectTransformDimensionsChange()
     {
-        RefreshAdaptiveLayout();
+        if (isApplyingLayout)
+            return;
+
+        RequestAdaptiveLayoutRefresh();
     }
 
     public void OnPointerEnter(PointerEventData eventData) => OnMouseEnter();
@@ -162,12 +184,70 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
         lightRectTransform = targetLight.transform as RectTransform;
     }
 
-    private void RefreshAdaptiveLayout()
+    private void RequestAdaptiveLayoutRefresh()
     {
-        if (isRefreshingLayout)
+        layoutRefreshRequested = true;
+
+#if UNITY_EDITOR
+        if (!Application.IsPlaying(gameObject))
+            ScheduleEditorAdaptiveLayoutRefresh();
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void ScheduleEditorAdaptiveLayoutRefresh()
+    {
+        if (isEditorLayoutRefreshScheduled)
             return;
 
-        isRefreshingLayout = true;
+        isEditorLayoutRefreshScheduled = true;
+        EditorApplication.delayCall += ApplyDelayedEditorAdaptiveLayoutRefresh;
+    }
+
+    private void ApplyDelayedEditorAdaptiveLayoutRefresh()
+    {
+        isEditorLayoutRefreshScheduled = false;
+
+        if (this == null)
+            return;
+
+        ApplyAdaptiveLayoutIfRequested();
+    }
+#endif
+
+    private void RequestAdaptiveLayoutRefreshIfObservedValuesChanged()
+    {
+        string currentText = targetText.text;
+
+        if (observedText == currentText
+            && observedAutoResizeWidthByText == autoResizeWidthByText
+            && Mathf.Approximately(observedWidthPerTextCharacter, widthPerTextCharacter)
+            && Mathf.Approximately(observedChevronDistance, chevronDistance))
+            return;
+
+        observedText = currentText;
+        observedAutoResizeWidthByText = autoResizeWidthByText;
+        observedWidthPerTextCharacter = widthPerTextCharacter;
+        observedChevronDistance = chevronDistance;
+
+        RequestAdaptiveLayoutRefresh();
+    }
+
+    private void ApplyAdaptiveLayoutIfRequested()
+    {
+        if (!layoutRefreshRequested)
+            return;
+
+        ApplyAdaptiveLayout();
+    }
+
+    private void ApplyAdaptiveLayout()
+    {
+        if (isApplyingLayout)
+            return;
+
+        isApplyingLayout = true;
+        layoutRefreshRequested = false;
 
         if (autoResizeWidthByText)
             ResizeRootWidthByText();
@@ -176,33 +256,58 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
         SyncChevronPosition(leftChevronRectTransform, -1f);
         SyncChevronPosition(rightChevronRectTransform, 1f);
 
-        isRefreshingLayout = false;
+        isApplyingLayout = false;
     }
 
     private void ResizeRootWidthByText()
     {
-        int characterCount = GetTextCharacterCount();
+        int characterCount = GetLongestManualLineCharacterCount();
         float width = Mathf.Max(0f, characterCount * widthPerTextCharacter);
-        rootRectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+        SetSizeWithCurrentAnchorsIfChanged(rootRectTransform, RectTransform.Axis.Horizontal, width);
     }
 
-    private int GetTextCharacterCount()
+    private int GetLongestManualLineCharacterCount()
     {
-        targetText.ForceMeshUpdate(true, true);
-        return targetText.textInfo.characterCount;
+        string[] lines = targetText.text.Split(ManualLineSeparators, StringSplitOptions.None);
+        int longestCharacterCount = 0;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Length <= longestCharacterCount)
+                continue;
+
+            longestCharacterCount = lines[i].Length;
+        }
+
+        return longestCharacterCount;
     }
 
     private void SyncLightRectTransform()
     {
         Vector2 rootSize = rootRectTransform.rect.size;
-        lightRectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rootSize.x);
-        lightRectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rootSize.y);
+        SetSizeWithCurrentAnchorsIfChanged(lightRectTransform, RectTransform.Axis.Horizontal, rootSize.x);
+        SetSizeWithCurrentAnchorsIfChanged(lightRectTransform, RectTransform.Axis.Vertical, rootSize.y);
+    }
+
+    private void SetSizeWithCurrentAnchorsIfChanged(RectTransform rectTransform, RectTransform.Axis axis, float size)
+    {
+        float currentSize = axis == RectTransform.Axis.Horizontal ? rectTransform.rect.width : rectTransform.rect.height;
+
+        if (Mathf.Approximately(currentSize, size))
+            return;
+
+        rectTransform.SetSizeWithCurrentAnchors(axis, size);
     }
 
     private void SyncChevronPosition(RectTransform chevronRectTransform, float direction)
     {
         Vector2 position = chevronRectTransform.anchoredPosition;
-        position.x = direction * (rootRectTransform.rect.width * 0.5f + chevronDistance);
+        float targetX = direction * (rootRectTransform.rect.width * 0.5f + chevronDistance);
+
+        if (Mathf.Approximately(position.x, targetX))
+            return;
+
+        position.x = targetX;
         chevronRectTransform.anchoredPosition = position;
     }
 
@@ -406,6 +511,14 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void OnDisable()
     {
+#if UNITY_EDITOR
+        if (isEditorLayoutRefreshScheduled)
+        {
+            EditorApplication.delayCall -= ApplyDelayedEditorAdaptiveLayoutRefresh;
+            isEditorLayoutRefreshScheduled = false;
+        }
+#endif
+
         if (!Application.IsPlaying(gameObject))
             return;
 
@@ -417,6 +530,14 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void OnDestroy()
     {
+#if UNITY_EDITOR
+        if (isEditorLayoutRefreshScheduled)
+        {
+            EditorApplication.delayCall -= ApplyDelayedEditorAdaptiveLayoutRefresh;
+            isEditorLayoutRefreshScheduled = false;
+        }
+#endif
+
         if (!Application.IsPlaying(gameObject))
             return;
 
