@@ -1,2 +1,19 @@
 fileFormatVersion: 2
 guid: 58cd133ee8c1670498b636389b835b65
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - audioRegistry: {fileID: 11400000, guid: 98d60446195821b42a72bec149a91ad4, type: 2}
+  - sfxPrefab: {fileID: 481162255565895830, guid: 160a262952532a648b06b5b0a6612a80, type: 3}
+  - sfxPoolRoot: {instanceID: 0}
+  - bgmSourceA: {instanceID: 0}
+  - bgmSourceB: {instanceID: 0}
+  - audioMixer: {fileID: 24100000, guid: be46ebba56b8d044f85d2161d94831c3, type: 2}
+  - bgmMixerGroup: {fileID: 4882998564724328536, guid: be46ebba56b8d044f85d2161d94831c3, type: 2}
+  - sfxMixerGroup: {fileID: -3245532713500045232, guid: be46ebba56b8d044f85d2161d94831c3, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

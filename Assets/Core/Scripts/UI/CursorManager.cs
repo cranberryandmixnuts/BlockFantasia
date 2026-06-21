@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public sealed class CursorManager : Singleton<CursorManager, GlobalScope>
 {
@@ -13,7 +14,7 @@ public sealed class CursorManager : Singleton<CursorManager, GlobalScope>
 
     private void Update()
     {
-        bool nextPressed = Input.GetMouseButton(0);
+        bool nextPressed = Mouse.current.leftButton.isPressed;
 
         if (isPressed == nextPressed)
             return;

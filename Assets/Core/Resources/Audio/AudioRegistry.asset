@@ -12,4 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17ee5179b708bea4ca18c31bd334f00c, type: 3}
   m_Name: AudioRegistry
   m_EditorClassIdentifier: Assembly-CSharp::AudioRegistry
-  audioClips: []
+  audioClips:
+  - {fileID: 8300000, guid: 675703fd9111dc941a40618f27e00318, type: 3}
+  - {fileID: 8300000, guid: 79e77ce0fdd76df438b1cefd5841872d, type: 3}
