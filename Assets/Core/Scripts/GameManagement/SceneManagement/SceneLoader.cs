@@ -10,7 +10,7 @@ public sealed class SceneLoader : Singleton<SceneLoader, GlobalScope>
 {
     [Header("Fade UI")]
     [SerializeField, Required] private Image fadeImage;
-    [SerializeField] private float fadeDuration = 1.0f;
+    [SerializeField] private float fadeDuration = 0.5f;
 
     public bool IsTransitioning { get; private set; } = false;
     public SceneType CurrentSceneType { get; private set; } = SceneType.None;
