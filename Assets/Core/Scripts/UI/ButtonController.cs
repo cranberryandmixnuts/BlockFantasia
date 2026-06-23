@@ -112,7 +112,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
         if (!Application.IsPlaying(gameObject))
             return;
 
-        bool isCooldownOver = lastClickTime + clickCooldownTime <= Time.time;
+        bool isCooldownOver = lastClickTime + clickCooldownTime <= Time.unscaledTime;
 
         if (isCooldownOver != button.interactable)
             button.interactable = isCooldownOver;
@@ -343,6 +343,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
         chevron.transform
             .DOScale(scale, animationDuration)
             .SetEase(ease)
+            .SetUpdate(true)
             .SetLink(chevron, LinkBehaviour.KillOnDestroy);
 
         FadeGraphics(graphics, alpha, animationDuration);
@@ -358,6 +359,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
         clickEffectSequence = DOTween.Sequence()
             .SetTarget(targetLight)
+            .SetUpdate(true)
             .SetLink(targetLight, LinkBehaviour.KillOnDestroy);
 
         clickEffectSequence
@@ -455,6 +457,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
         {
             graphics[i]
                 .DOFade(alpha, duration)
+                .SetUpdate(true)
                 .SetLink(graphics[i].gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
@@ -467,6 +470,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
         {
             Tween fadeTween = graphics[i]
                 .DOFade(alpha, duration)
+                .SetUpdate(true)
                 .SetLink(graphics[i].gameObject, LinkBehaviour.KillOnDestroy);
 
             if (isFirstTween)
@@ -500,7 +504,7 @@ public class ButtonController : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void OnClickButton()
     {
-        lastClickTime = Time.time;
+        lastClickTime = Time.unscaledTime;
     }
 
     private void OnActiveSceneChanged(Scene currentScene, Scene nextScene)
